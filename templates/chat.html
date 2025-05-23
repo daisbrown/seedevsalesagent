@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Sealed Air Intelligence</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+  <link rel="stylesheet" href="../static/css/site.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- LEFT NAVIGATION -->
+    <nav class="left-nav" id="leftNav">
+      <div class="left-nav-header" id="leftNavHeader">
+        <button class="feedback-button" id="feedbackButton">
+            <img class="feedback-icon" src="../static/images/idea-feedback-icon-SEE.svg">
+        </button>
+        <button class="new-message-button" onclick="createNewChat()">
+            <img class="new-message-icon" src="../static/images/new-chat-icon-SEE.svg">
+        </button>
+      </div>
+      <div class="left-nav-body">
+        <ul class="conversation-list" id="conversationList">
+          {% for conv in conversations %}
+            <li class="conversation-item {% if conv.active %}active{% endif %}" onclick="switchChat('{{ conv.id }}')">
+              <span class="conversation-title">{{ conv.title or 'New Conversation' }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Chat Info Section -->
+      <div class="chat-info-message" id="chatInfoMessage">
+        <div class="info-message-item">
+          <span class="info-message-label">User:</span>
+          <div class="info-message-value">{{ user_name or 'Guest' }}</div>
+        </div>
+        <div class="info-message-item">
+          <span class="info-message-label">Focus Area:</span>
+          <div class="info-message-value">{{ focus_area }}</div>
+        </div>
+      </div>
+
+      <div class="left-nav-footer">
+        <button class="chat-info-button" id="chatInfoButton">
+          <img class="chat-info-icon" src="../static/images/info-circle-icon-SEE.svg">
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN PAYLOAD : Header, Chat Messages and Footer -->
+    <div class="right-content" id="rightContent">
+
+      <!-- Header : Logo and Hamburger Icon -->
+      <div class="header">
+        <div class="brand-picture">
+          <picture class="see-brand-picture">
+              <img class="see-brand-picture-image" src="../static/images/corporate-logo_full-color.svg" alt="SealedAir Logo">
+          </picture>
+        </div>
+        <div class="hamburger" id="hamburger">&#9776;</div>
+      </div>
+
+      <!-- Main Payload for Chat Messages -->
+      <div class="body-content">
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chatContainer">
+          {% for message in chat_history %}
+          <div class="message {% if message.role == 'user' %}user-message{% else %}assistant-message{% endif %}">
+            {{ message.content|trim|safe }}
+            {% if message.role == 'assistant' and message.citations %}
+            <div class="citations-container">
+              <div class="citations-grid">
+                {% set unique_urls = [] %}
+                {% for citation in message.citations %}
+                  {% if citation.url not in unique_urls %}
+                    {% set _ = unique_urls.append(citation.url) %}
+                    <div class="citation-tile">
+                      <div class="citation-preview">
+                        {% if citation.url|lower|regex_match('\.(doc|docx|xls|xlsx|ppt|pptx)$') %}
+                          <div class="office-doc-preview">
+                            <img class="office-doc-icon" src="{{ url_for('static', filename='images/m365.svg') }}" alt="Microsoft Office document icon">
+                          </div>
+                        {% else %}
+                          <iframe 
+                            class="document-preview" 
+                            src="{{ citation.url|default('#') }}" 
+                            title="Preview of {{ citation.title or citation.filepath or 'Untitled Source' }}"
+                          ></iframe>
+                        {% endif %}
+                      </div>
+                      <div class="citation-details">
+                        <div class="citation-title">{{ citation.title or citation.filepath or 'Untitled Source' }}</div>
+                        <a href="{{ citation.url|default('#') }}" class="citation-link" target="_blank">Open Document</a>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Footer : Text Area And Send Button -->
+      <div class="footer">
+        <form class="chat-footer" id="chatForm" onsubmit="event.preventDefault(); sendMessage();">
+          <textarea name="question" id="user-input" rows="1" placeholder="Type your message..." required></textarea>
+          <button type="submit" class="send-button" id="sendButton">Send</button>
+        </form>
+      </div>
+
+      <!-- Feeback capture -->
+      <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h2>Share Your Feedback</h2>
+          <form id="feedbackForm">
+            <div class="feedback-type">
+              <label>
+                <input type="radio" name="type" value="problem" required> Report a Problem
+              </label>
+              <label>
+                <input type="radio" name="type" value="idea"> Share an Idea
+              </label>
+            </div>
+            <textarea 
+              id="feedbackContent" 
+              name="content" 
+              placeholder="Please describe your feedback..." 
+              required
+            ></textarea>
+            <button type="submit">Submit Feedback</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="preview-modal" id="previewModal">
+    <div class="preview-modal-content">
+      <div class="preview-modal-header">
+        <div class="preview-modal-title"></div>
+        <div class="preview-modal-close">&times;</div>
+      </div>
+      <div class="preview-modal-body">
+        <iframe loading="lazy"></iframe>
+      </div>
+      <div class="preview-modal-footer">
+        <a href="#" target="_blank">Open in New Tab</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  <script>
+    // Auto-scroll chat container on page load
+    var chatContainer = document.getElementById('chatContainer');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  </script>
+</body>
+</html>
