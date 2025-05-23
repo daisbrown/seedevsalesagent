@@ -68,4 +68,4 @@ jobs:
         with:
           app-name: 'app-itinnovat-dev-salesagent'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2E9E3C5B74024070BE8DC4909B24C3B8 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E23AEDE8FBBC4F94A53E5513CEF72245 }}
